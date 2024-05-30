@@ -90,11 +90,9 @@ bool cache_read_byte(struct cache *cache, uint32_t addr, uint8_t *byte)
     {
         if ((cache->lines)[i].tag == tag)
         {
-            if ((cache->lines)[i].data == byte)
-            {
-                (cache->lines)[i].last_access = get_timestamp();
-                return 1;
-            }
+            (cache->lines)[i].last_access = get_timestamp();
+            byte = (cache->lines)[i].data;
+            return 1;
         }
     }
 
@@ -111,21 +109,21 @@ bool cache_read_byte(struct cache *cache, uint32_t addr, uint8_t *byte)
             v = i;
         }
     }
-    cache->lines[v].last_access = get_timestamp();
-
     struct cache_line *victim = cache->lines + v * (cache->config.line_size);
+    uint32_t victim_addr = ((victim->tag) << ((cache->index_bits) + (cache->offset_bits))) + (index << (cache->offset_bits));
 
     if (cache->lines[v].dirty == 1)
     {
-        mem_store(victim->data, addr, cache->config.line_size);
+        mem_store(victim->data, victim_addr, cache->config.line_size);
     }
 
     mem_load(victim->data, addr, cache->config.line_size);
 
-    if (cache->config.write_back == 1)
-    {
-        cache->lines[v].dirty = 1;
-    }
+    (cache->lines)[v].last_access = get_timestamp();
+    (cache->lines)[v].valid = 1;
+    (cache->lines)[v].dirty = 0;
+
+    byte = (cache->lines)[v].data;
 
     return 0;
 }
@@ -137,26 +135,18 @@ bool cache_write_byte(struct cache *cache, uint32_t addr, uint8_t byte)
     uint32_t tag = cache->tag_mask & addr;
     uint32_t index = cache->index_mask & addr;
 
-    for (uint32_t i = cache->config.ways * index; i < cache->config.ways * (index + 1); i++)
+    for (uint32_t i = (cache->config.ways) * index; i < (cache->config.ways) * (index + 1); i++)
     {
 
-        if ((cache->lines)[i].tag == tag)
+        if ((cache->lines)[i].tag == tag && ((cache->lines)[i].valid == 1))
         {
-            if (*(cache->lines)[i].data == byte)
-            {
-                (cache->lines)[i].last_access = get_timestamp();
-                if (cache->config.write_back == 0)
-                {
-                    struct cache_line *write = cache->lines + i * cache->config.line_size;
-                    mem_store(write->data, addr, cache->config.line_size);
-                }
-                return 1;
-            }
+            (cache->lines)[i].last_access = get_timestamp();
+            return 1;
         }
     }
 
     uint32_t v = cache->config.ways * index;
-    for (uint32_t i = cache->config.ways * index; i < cache->config.ways * (index + 1); i++)
+    for (uint32_t i = (cache->config.ways) * index; i < (cache->config.ways) * (index + 1); i++)
     {
         if ((cache->lines[i].tag == 0))
         {
@@ -168,22 +158,24 @@ bool cache_write_byte(struct cache *cache, uint32_t addr, uint8_t byte)
             v = i;
         }
     }
-    cache->lines[v].last_access = get_timestamp();
     struct cache_line *victim = cache->lines + v * cache->config.line_size;
-
-    (cache->lines)[v].valid = 1;
+    uint32_t victim_addr = ((victim->tag) << ((cache->index_bits) + (cache->offset_bits))) + (index << (cache->offset_bits));
 
     if (cache->lines[v].dirty == 1)
     {
-        mem_store(victim->data, addr, cache->config.line_size);
+        mem_store(victim->data, victim_addr, cache->config.line_size);
     }
 
     mem_load(victim->data, addr, cache->config.line_size);
 
+    cache->lines[v].last_access = get_timestamp();
+    (cache->lines)[v].valid = 1;
     if (cache->config.write_back == 1)
     {
         cache->lines[v].dirty = 1;
     }
+
+    *(cache->lines[v]).data = byte;
 
     return 0;
 }
