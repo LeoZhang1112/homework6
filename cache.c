@@ -86,20 +86,20 @@ bool cache_read_byte(struct cache *cache, uint32_t addr, uint8_t *byte)
     uint32_t tag = cache->tag_mask & addr;
     uint32_t index = cache->index_mask & addr;
 
-    for (uint32_t i = cache->config.ways * index; i < cache->config.ways * (index + 1) - 1; i++)
+    for (uint32_t i = (cache->config.ways) * index; i < (cache->config.ways) * (index + 1); i++)
     {
-        (cache->lines)[i].last_access = get_timestamp();
         if ((cache->lines)[i].tag == tag)
         {
             if ((cache->lines)[i].data == byte)
             {
+                (cache->lines)[i].last_access = get_timestamp();
                 return 1;
             }
         }
     }
 
-    uint32_t v = cache->config.ways * index;
-    for (uint32_t i = cache->config.ways * index; i < cache->config.ways * (index + 1) - 1; i++)
+    uint32_t v = (cache->config.ways) * index;
+    for (uint32_t i = (cache->config.ways) * index; i < (cache->config.ways) * (index + 1); i++)
     {
         if ((cache->lines[i].tag == 0))
         {
@@ -111,7 +111,9 @@ bool cache_read_byte(struct cache *cache, uint32_t addr, uint8_t *byte)
             v = i;
         }
     }
-    struct cache_line *victim = cache->lines + v * cache->config.line_size;
+    cache->lines[v].last_access = get_timestamp();
+
+    struct cache_line *victim = cache->lines + v * (cache->config.line_size);
 
     if (cache->lines[v].dirty == 1)
     {
@@ -119,6 +121,7 @@ bool cache_read_byte(struct cache *cache, uint32_t addr, uint8_t *byte)
     }
 
     mem_load(victim->data, addr, cache->config.line_size);
+
     if (cache->config.write_back == 1)
     {
         cache->lines[v].dirty = 1;
@@ -126,6 +129,7 @@ bool cache_read_byte(struct cache *cache, uint32_t addr, uint8_t *byte)
 
     return 0;
 }
+
 /* Write one byte into a specific address. return hit=true/miss=false*/
 bool cache_write_byte(struct cache *cache, uint32_t addr, uint8_t byte)
 {
@@ -133,13 +137,14 @@ bool cache_write_byte(struct cache *cache, uint32_t addr, uint8_t byte)
     uint32_t tag = cache->tag_mask & addr;
     uint32_t index = cache->index_mask & addr;
 
-    for (uint32_t i = cache->config.ways * index; i < cache->config.ways * (index + 1) - 1; i++)
+    for (uint32_t i = cache->config.ways * index; i < cache->config.ways * (index + 1); i++)
     {
-        (cache->lines)[i].last_access = get_timestamp();
+
         if ((cache->lines)[i].tag == tag)
         {
             if (*(cache->lines)[i].data == byte)
             {
+                (cache->lines)[i].last_access = get_timestamp();
                 if (cache->config.write_back == 0)
                 {
                     struct cache_line *write = cache->lines + i * cache->config.line_size;
@@ -151,7 +156,7 @@ bool cache_write_byte(struct cache *cache, uint32_t addr, uint8_t byte)
     }
 
     uint32_t v = cache->config.ways * index;
-    for (uint32_t i = cache->config.ways * index; i < cache->config.ways * (index + 1) - 1; i++)
+    for (uint32_t i = cache->config.ways * index; i < cache->config.ways * (index + 1); i++)
     {
         if ((cache->lines[i].tag == 0))
         {
@@ -163,6 +168,7 @@ bool cache_write_byte(struct cache *cache, uint32_t addr, uint8_t byte)
             v = i;
         }
     }
+    cache->lines[v].last_access = get_timestamp();
     struct cache_line *victim = cache->lines + v * cache->config.line_size;
 
     (cache->lines)[v].valid = 1;
