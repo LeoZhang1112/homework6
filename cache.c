@@ -91,7 +91,7 @@ bool cache_read_byte(struct cache *cache, uint32_t addr, uint8_t *byte)
         if ((cache->lines)[i].tag == tag)
         {
             (cache->lines)[i].last_access = get_timestamp();
-            byte = (cache->lines)[i].data;
+            *byte = *(cache->lines)[i].data;
             return 1;
         }
     }
@@ -123,7 +123,7 @@ bool cache_read_byte(struct cache *cache, uint32_t addr, uint8_t *byte)
     (cache->lines)[v].valid = 1;
     (cache->lines)[v].dirty = 0;
 
-    byte = (cache->lines)[v].data;
+    *byte = *(cache->lines)[v].data;
 
     return 0;
 }
