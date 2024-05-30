@@ -35,6 +35,7 @@ struct cache *cache_create(struct cache_config config, struct cache *lower_level
     cache_create->offset_bits = size_of_offset;
     cache_create->offset_mask = ((1 << size_of_offset) - 1);
 
+    cache_create->lines = (struct cache_line *)malloc(config.lines * config.line_size);
     for (uint32_t i = 0; i < config.lines; i++)
     {
         (cache_create->lines)[i].valid = 0;
