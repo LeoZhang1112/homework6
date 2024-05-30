@@ -177,5 +177,10 @@ bool cache_write_byte(struct cache *cache, uint32_t addr, uint8_t byte)
 
     *(cache->lines[v]).data = byte;
 
+    if ((cache->config.write_back) == 0)
+    {
+        mem_store((cache->lines[v]).data, addr, cache->config.line_size);
+    }
+
     return 0;
 }
