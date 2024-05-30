@@ -54,7 +54,7 @@ struct cache *cache_create(struct cache_config config, struct cache *lower_level
     }
     for (uint32_t i = 0; i < config.lines; i++)
     {
-        (cache_create->lines)[i].data = NULL;
+        (cache_create->lines)[i].data = (uint8_t *)malloc(sizeof(uint8_t));
     }
 
     cache_create->lower_cache = lower_level;
@@ -88,7 +88,6 @@ void cache_destroy(struct cache *cache)
         }
     }
     free(cache->lines);
-    free(cache->lower_cache);
     free(cache);
 }
 
