@@ -74,6 +74,18 @@ and so on.
 void cache_destroy(struct cache *cache)
 {
     /*YOUR CODE HERE*/
+    if (cache->config.write_back == 1)
+    {
+        for (uint32_t i = 0; i < cache->config.lines; i++)
+        {
+            if (cache->lines[i].dirty == 1)
+            {
+                uint32_t index = i / (cache->config.ways);
+                uint32_t addr = (cache->lines[i].tag << ((cache->index_bits) + (cache->offset_bits))) + (index << (cache->offset_bits));
+                mem_store(cache->lines[i].data, addr, cache->config.line_size);
+            }
+        }
+    }
     free(cache->lines);
     free(cache->lower_cache);
     free(cache);
